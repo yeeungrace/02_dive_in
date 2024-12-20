@@ -220,8 +220,8 @@ button{
               const handY = landmark.y * canvas.height;
               const dist = Math.hypot(handX - image.x, handY - image.y);
               if (dist < 50) {
-                image.speedX = (image.x - handX) * 0.1;
-                image.speedY = (image.y - handY) * 0.1;
+                image.speedX = (image.x - handX) * 0.2;
+                image.speedY = (image.y - handY) * 0.2;
               }
             });
           });

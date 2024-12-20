@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+  <title>dive-in</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Instrument Serif', serif;
+      display: flex;
+      background-color: black;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+button{
+  font-family: 'Instrument Serif', serif;
+      cursor: pointer;
+      border: 1px solid #000;
+        list-style: none;
+        color:black;
+       font-size: 2rem;
+      background: rgba(255, 255, 255, 0.5);
+}
+
+    #bg-img {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      object-fit: cover;
+    }
+
+    #container {
+      position: relative;
+      width: 80%;
+      max-width: 800px;
+      height: 60%;
+      max-height: 600px;
+      background-color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #outputCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #webcam {
+      display: none; /* Hidden as the video is rendered in the canvas */
+    }
+
+    #back-button {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      height:40px;
+      cursor: pointer;
+    }
+
+    #page-numbers {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .title{
+      position: absolute;
+      top:20px;
+      left: 20px;
+    }
+    #title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 30px;
+      font-style: italic;
+    }
+
+    #subtitle {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <img id="bg-img" src="https://images.unsplash.com/photo-1441990912087-4acb4d2d1d3a?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Background">
+  <div class="title">
+  <div id="title">Dive-in</div>
+  <div id="subtitle">손을 움직여보세요</div>
+</div>
+  <div id="container">
+    <video id="webcam" autoplay muted></video>
+    <canvas id="outputCanvas"></canvas>
+  </div>
+
+  <a href="https://yeeungrace.github.io/Unnatural-Nature/" id="back-button" href="https://yeeungrace.github.io/Unnatural-Nature/")><button>back</button></a>
+
+  <div id="page-numbers">
+    <button data-bg="1">01</button>
+    <button data-bg="2">02</button>
+    <button data-bg="3">03</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script>
+    const bgImages = [
+      {src: 'bg-img-1-1.jpg', images: ['flower.png','acorn.png','eagle.png']},
+      {src: 'bg-img-2-1.jpg', images: ['starfish.png','bubble.png','shell.png']},
+      {src: 'bg-img-3-2.jpg', images: ['ice.png', 'branches.png', 'snowflakes.png']}
+    ];
+
+    const bgImgElement = document.getElementById('bg-img');
+    const buttons = document.querySelectorAll('#page-numbers button');
+    let currentImages = [];
+
+    const imageSets = bgImages.map(bg => bg.images.map(src => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    }));
+
+    buttons.forEach((button, index) => {
+      button.addEventListener('click', () => {
+        bgImgElement.src = bgImages[index].src;
+        currentImages = imageSets[index];
+        updateRandomImages();
+      });
+    });
+
+    const randomImages = [];
+
+    function createRandomImage(img) {
+      return {
+        img,
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        speedX: (Math.random() - 0.5) * 4,
+        speedY: (Math.random() - 0.5) * 4
+      };
+    }
+
+    function updateRandomImages() {
+      const count = Math.floor(Math.random() * 6) + 20;
+      randomImages.length = 0;
+
+      for (let i = 0; i < count; i++) {
+        const imageSet = currentImages.length ? currentImages : imageSets[0];
+        const image = imageSet[Math.floor(Math.random() * imageSet.length)];
+        randomImages.push(createRandomImage(image));
+      }
+    }
+
+    let videoElement = document.getElementById("webcam");
+    let canvas = document.getElementById("outputCanvas");
+    let ctx = canvas.getContext("2d");
+
+    let handResults = undefined;
+
+    function resizeCanvas() {
+      canvas.width = document.getElementById("container").clientWidth;
+      canvas.height = document.getElementById("container").clientHeight;
+      updateRandomImages();
+    }
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    });
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+
+    hands.onResults((results) => {
+      handResults = results;
+    });
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({ image: videoElement });
+      },
+      facingMode: "user",
+      width: 640,
+      height: 480,
+    });
+
+    camera.start();
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    function moveImages() {
+      randomImages.forEach((image) => {
+        image.x += image.speedX;
+        image.y += image.speedY;
+
+        if (image.x < 0 || image.x > canvas.width) image.speedX *= -1;
+        if (image.y < 0 || image.y > canvas.height) image.speedY *= -1;
+
+        if (handResults && handResults.multiHandLandmarks) {
+          handResults.multiHandLandmarks.forEach((landmarks) => {
+            landmarks.forEach((landmark) => {
+              const handX = (1 - landmark.x) * canvas.width;
+              const handY = landmark.y * canvas.height;
+              const dist = Math.hypot(handX - image.x, handY - image.y);
+              if (dist < 50) {
+                image.speedX = (image.x - handX) * 0.1;
+                image.speedY = (image.y - handY) * 0.1;
+              }
+            });
+          });
+        }
+
+        ctx.drawImage(image.img, image.x - 25, image.y - 25, 80, 80); // Adjusted size
+  });
+}
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (videoElement.readyState === 4) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.translate(-canvas.width, 0);
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      moveImages();
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>
